@@ -31,6 +31,43 @@ class _JobListScreenState extends State<JobListScreen> {
     });
   }
 
+  /// get the sync status of inspections for a job
+  /// returns "Pending sync", "Synced", "Failed", or "No inspections"
+  Future<String> _getInspectionSyncStatus(String jobId) async {
+    final inspections = await DatabaseHelper.instance.getInspectionItemsByJobId(jobId);
+
+    if (inspections.isEmpty) {
+      return 'No inspections';
+    }
+
+    // check for any failed syncs
+    if (inspections.any((item) => item.syncState == 'failed')) {
+      return 'Failed';
+    }
+
+    // check if all are synced
+    if (inspections.every((item) => item.syncState == 'synced')) {
+      return 'Synced';
+    }
+
+    // otherwise, at least one is pending
+    return 'Pending sync';
+  }
+
+  /// get the color for the sync status chip
+  Color _getSyncStatusColor(String status) {
+    switch (status) {
+      case 'Synced':
+        return Colors.green;
+      case 'Failed':
+        return Colors.red;
+      case 'Pending sync':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,8 +79,29 @@ class _JobListScreenState extends State<JobListScreen> {
         builder: (context, snapshot) {
           // show loading spinner while fetching jobs
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            return const CenteFutureBuilder<String>(
+                      future: _getInspectionSyncStatus(job.jobId),
+                      builder: (context, syncSnapshot) {
+                        final syncStatus = syncSnapshot.data ?? 'No inspections';
+                        final color = _getSyncStatusColor(syncStatus);
+
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // status
+                            Chip(
+                              label: Text(job.status),
+                              backgroundColor: Colors.blue.shade100,
+                            ),
+                            const SizedBox(width: 8),
+                            Chip(
+                              label: Text(syncStatus),
+                              backgroundColor: color.withOpacity(0.2),
+                              labelStyle: TextStyle(color: color),
+                            ),
+                          ],
+                        );
+                      }
 
           // show error message if something went wrong
           if (snapshot.hasError) {
