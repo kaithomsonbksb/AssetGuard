@@ -54,8 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
 
-        // TODO: Navigate to home screen or dashboard after successful login
-        // Navigator.of(context).pushReplacementNamed('/home');
+        // Navigate to jobs screen after successful login
+        Navigator.of(context).pushReplacementNamed('/jobs');
       });
     }
   }
