@@ -1,5 +1,7 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:io';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:assetguard/models/job.dart';
 
 /// DatabaseHelper singleton class that manages SQLite database operations
@@ -26,20 +28,43 @@ class DatabaseHelper {
   static const String statusColumn = 'status';
 
   /// initialize database
-  Future<Database> get database async {
-    _database ??= await _initDatabase();
+Future<Database> get database async {
+  if (_database != null) {
     return _database!;
   }
 
-  Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), _dbName);
+  _database = await _initDatabase();
+  return _database!;
+}
+
+Future<Database> _initDatabase() async {
+  const databaseName = 'assetguard.db';
+
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+
+    final dbPath = await databaseFactory.getDatabasesPath();
+    final path = join(dbPath, databaseName);
+
+    return await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: _onCreate,
+      ),
+    );
+  } else {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, databaseName);
 
     return await openDatabase(
       path,
-      version: _dbVersion,
+      version: 1,
       onCreate: _onCreate,
     );
   }
+}
 
   /// create database tables
   Future<void> _onCreate(Database db, int version) async {
