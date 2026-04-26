@@ -1,12 +1,12 @@
 /// job model
-class job {
+class Job {
   final String jobId;
   final String siteName;
   final String assignedEngineer;
   final DateTime dueDate;
   final String status;
 
-  job({
+  Job({
     required this.jobId,
     required this.siteName,
     required this.assignedEngineer,
@@ -26,8 +26,8 @@ class job {
   }
 
   /// create job instance from map database
-  factory job.fromMap(Map<String, dynamic> map) {
-    return job(
+  factory Job.fromMap(Map<String, dynamic> map) {
+    return Job(
       jobId: map['job_id'] as String,
       siteName: map['site_name'] as String,
       assignedEngineer: map['assigned_engineer'] as String,
@@ -37,14 +37,14 @@ class job {
   }
 
   /// create copy of job with some fields replaced
-  job copyWith({
+  Job copyWith({
     String? jobId,
     String? siteName,
     String? assignedEngineer,
     DateTime? dueDate,
     String? status,
   }) {
-    return job(
+    return Job(
       jobId: jobId ?? this.jobId,
       siteName: siteName ?? this.siteName,
       assignedEngineer: assignedEngineer ?? this.assignedEngineer,
