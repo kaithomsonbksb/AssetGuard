@@ -83,7 +83,11 @@ class _JobListScreenState extends State<JobListScreen> {
                       label: Text(job.status),
                     ),
                     onTap: () {
-                      // TODO: Navigate to inspection detail screen
+                      // navigate to inspection detail screen with selected job
+                      Navigator.of(context).pushNamed(
+                        '/inspection',
+                        arguments: job,
+                      );
                     },
                   ),
                 );

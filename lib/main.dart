@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'screens/login_screen.dart';
 import 'screens/job_list_screen.dart';
+import 'screens/inspection_detail_screen.dart';
 
 void main() {
   // Initialize database factory for FFI (required for Windows/Linux/macOS)
@@ -27,6 +28,11 @@ class AssetGuardApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginScreen(),
         '/jobs': (context) => const JobListScreen(),
+        '/inspection': (context) {
+          // get job from route arguments
+          final job = ModalRoute.of(context)!.settings.arguments;
+          return InspectionDetailScreen(job: job as dynamic);
+        },
       },
     );
   }
