@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:assetguard/models/job.dart';
+import 'package:assetguard/models/inspection_item.dart';
+import 'package:assetguard/database/database_helper.dart';
 
 /// InspectionDetailScreen displays details for a selected job
 /// and allows the user to enter inspection results and notes
@@ -40,19 +43,49 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
     super.dispose();
   }
 
-  /// handler for save button press
-  void _handleSave() {
+  /// handle save button press - saves inspection data to local database
+  void _handleSave() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Save inspection data to database
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Inspection saved successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      try {
+        // create new inspection item - unique ID
+        final inspectionItem = InspectionItem(
+          inspectionId: const Uuid().v4(), // Generate unique ID
+          jobId: widget.job.jobId,
+          notes: _notesController.text.trim(),
+          result: _selectedResult,
+          updatedAt: DateTime.now(),
+          syncState: 'pending', // Mark as pending sync
+        );
 
-      // back to job list
-      Navigator.of(context).pop();
+        // save to local db
+        await DatabaseHelper.instance.insertInspectionItem(inspectionItem);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Inspection saved successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // back to job list
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        }
+      } catch (e) {
+        // show error message if save fails
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving inspection: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

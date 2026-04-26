@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:assetguard/models/job.dart';
+import 'package:assetguard/models/inspection_item.dart';
 
 /// DatabaseHelper singleton class that manages SQLite database operations
 class DatabaseHelper {
@@ -26,6 +27,14 @@ class DatabaseHelper {
   static const String assignedEngineerColumn = 'assigned_engineer';
   static const String dueDateColumn = 'due_date';
   static const String statusColumn = 'status';
+
+  // InspectionItem table columns
+  static const String inspectionIdColumn = 'inspection_id';
+  static const String inspectionJobIdColumn = 'job_id';
+  static const String notesColumn = 'notes';
+  static const String resultColumn = 'result';
+  static const String updatedAtColumn = 'updated_at';
+  static const String syncStateColumn = 'sync_state';
 
   /// initialize database
 Future<Database> get database async {
@@ -218,7 +227,71 @@ Future<Database> _initDatabase() async {
         dueDate: DateTime.now().add(const Duration(days: 7)),
         status: 'Assigned',
       ),
-    ];
+
+  /// insert a new inspection item into the database
+  Future<int> insertInspectionItem(InspectionItem item) async {
+    Database db = await database;
+    return await db.insert(
+      tableInspectionItems,
+      item.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// fetch all inspection items for a specific job
+  Future<List<InspectionItem>> getInspectionItemsByJobId(String jobId) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableInspectionItems,
+      where: '$inspectionJobIdColumn = ?',
+      whereArgs: [jobId],
+    );
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    return List.generate(maps.length, (i) {
+      return InspectionItem.fromMap(maps[i]);
+    });
+  }
+
+  /// fetch a single inspection item by its inspection_id
+  Future<InspectionItem?> getInspectionItemById(String inspectionId) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableInspectionItems,
+      where: '$inspectionIdColumn = ?',
+      whereArgs: [inspectionId],
+    );
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    return InspectionItem.fromMap(maps[0]);
+  }
+
+  /// update an existing inspection item
+  Future<int> updateInspectionItem(InspectionItem item) async {
+    Database db = await database;
+    return await db.update(
+      tableInspectionItems,
+      item.toMap(),
+      where: '$inspectionIdColumn = ?',
+      whereArgs: [item.inspectionId],
+    );
+  }
+
+  /// delete an inspection item by its inspection_id
+  Future<int> deleteInspectionItem(String inspectionId) async {
+    Database db = await database;
+    return await db.delete(
+      tableInspectionItems,
+      where: '$inspectionIdColumn = ?',
+      whereArgs: [inspectionId],
+    );
+  }
 
     for (final job in sampleJobs) {
       await insertJob(job);
