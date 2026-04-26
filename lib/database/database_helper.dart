@@ -162,6 +162,44 @@ class DatabaseHelper {
     });
   }
 
+  /// seed the database with sample jobs for testing
+  /// only inserts if no jobs exist
+  Future<void> seedSampleJobs() async {
+    final existingJobs = await getAllJobs();
+
+    if (existingJobs.isNotEmpty) {
+      return;
+    }
+
+    final sampleJobs = [
+      Job(
+        jobId: 'JOB001',
+        siteName: 'Telecom Mast Inspection',
+        assignedEngineer: 'Demo Engineer',
+        dueDate: DateTime.now().add(const Duration(days: 2)),
+        status: 'Assigned',
+      ),
+      Job(
+        jobId: 'JOB002',
+        siteName: 'Substation Safety Check',
+        assignedEngineer: 'Demo Engineer',
+        dueDate: DateTime.now().add(const Duration(days: 5)),
+        status: 'Assigned',
+      ),
+      Job(
+        jobId: 'JOB003',
+        siteName: 'Pipeline Valve Inspection',
+        assignedEngineer: 'Demo Engineer',
+        dueDate: DateTime.now().add(const Duration(days: 7)),
+        status: 'Assigned',
+      ),
+    ];
+
+    for (final job in sampleJobs) {
+      await insertJob(job);
+    }
+  }
+
   // ========== INSPECTION ITEMS CRUD OPERATIONS ==========
   // TODO: Implement inspection items methods
 
