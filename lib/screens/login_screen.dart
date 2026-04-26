@@ -17,9 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // flag track login button being processing
-  bool _isLoading = false;
-
   // flag to toggle password visibility
   bool _obscurePassword = true;
 
@@ -34,29 +31,22 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     // check if form is valid based on validators
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text.trim();
 
-      // simulate auth delay 
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        
-        setState(() {
-          _isLoading = false;
-        });
-
-        // show success message
+      // POC credentials for testing
+      if (username == 'engineer@assetguard.com' && password == 'password123') {
+        // navigate directly to jobs screen on successful login
+        Navigator.of(context).pushReplacementNamed('/jobs');
+      } else {
+        // Show error for invalid credentials
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Login successful!'),
-            backgroundColor: Colors.green,
+            content: Text('Invalid login details'),
+            backgroundColor: Colors.red,
           ),
         );
-
-        // Navigate to jobs screen after successful login
-        Navigator.of(context).pushReplacementNamed('/jobs');
-      });
+      }
     }
   }
 
@@ -182,34 +172,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Login button with loading state
+                // Login button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
-                  // Disable button while loading
+                  onPressed: _handleLogin,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  child: const Text(
+                    'Login',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 

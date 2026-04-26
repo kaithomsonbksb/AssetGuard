@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'screens/login_screen.dart';
 import 'screens/job_list_screen.dart';
 
 void main() {
+  // Initialize database factory for FFI (required for Windows/Linux/macOS)
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+  
   runApp(const AssetGuardApp());
 }
 
