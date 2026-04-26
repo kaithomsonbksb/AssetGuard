@@ -45,13 +45,11 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
 
   /// handle save button press - saves inspection data to local database
   void _handleSave() async {
-    // Validate the form
+    // validation
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Validate that result is selected (not just the default "Pass")
-    // In a real app, we might have a null-safe result selection
     if (_selectedResult.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -257,7 +255,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter inspection notes';
                     }
-                    // Check minimum length (at least 10 characters)
+                    //  minimum length <10 char
                     if (value.trim().length < 10) {
                       return 'Notes must be at least 10 characters long';
                     }
