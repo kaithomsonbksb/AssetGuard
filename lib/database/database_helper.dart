@@ -1,0 +1,176 @@
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:assetguard/models/job.dart';
+
+/// DatabaseHelper singleton class that manages SQLite database operations
+class DatabaseHelper {
+  DatabaseHelper._privateConstructor();
+
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+
+  static Database? _database;
+
+  static const String _dbName = 'assetguard.db';
+  static const int _dbVersion = 1;
+
+  // Table names
+  static const String tableJobs = 'jobs';
+  static const String tableInspectionItems = 'inspection_items';
+  static const String tableAttachments = 'attachments';
+
+  // Job table columns
+  static const String jobIdColumn = 'job_id';
+  static const String siteNameColumn = 'site_name';
+  static const String assignedEngineerColumn = 'assigned_engineer';
+  static const String dueDateColumn = 'due_date';
+  static const String statusColumn = 'status';
+
+  /// initialize database
+  Future<Database> get database async {
+    _database ??= await _initDatabase();
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    String path = join(await getDatabasesPath(), _dbName);
+
+    return await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: _onCreate,
+    );
+  }
+
+  /// create database tables
+  Future<void> _onCreate(Database db, int version) async {
+    // create jobs table
+    await db.execute('''
+      CREATE TABLE $tableJobs (
+        $jobIdColumn TEXT PRIMARY KEY,
+        $siteNameColumn TEXT NOT NULL,
+        $assignedEngineerColumn TEXT NOT NULL,
+        $dueDateColumn TEXT NOT NULL,
+        $statusColumn TEXT NOT NULL
+      )
+    ''');
+
+    // create inspection_items table
+    await db.execute('''
+      CREATE TABLE $tableInspectionItems (
+        inspection_id TEXT PRIMARY KEY,
+        job_id TEXT NOT NULL,
+        notes TEXT,
+        result TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_state TEXT NOT NULL,
+        FOREIGN KEY (job_id) REFERENCES $tableJobs($jobIdColumn)
+      )
+    ''');
+
+    // create attachments table
+    await db.execute('''
+      CREATE TABLE $tableAttachments (
+        attachment_id TEXT PRIMARY KEY,
+        inspection_id TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        sync_state TEXT NOT NULL,
+        FOREIGN KEY (inspection_id) REFERENCES $tableInspectionItems(inspection_id)
+      )
+    ''');
+  }
+
+  // ========== JOBS CRUD OPERATIONS ==========
+
+  /// insert a new job into the database
+  /// returns the number of rows affected
+  Future<int> insertJob(Job job) async {
+    Database db = await database;
+    return await db.insert(
+      tableJobs,
+      job.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// fetch all jobs from the database
+  Future<List<Job>> getAllJobs() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(tableJobs);
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    return List.generate(maps.length, (i) {
+      return Job.fromMap(maps[i]);
+    });
+  }
+
+  /// fetch a single job by its job_id
+  Future<Job?> getJobById(String jobId) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableJobs,
+      where: '$jobIdColumn = ?',
+      whereArgs: [jobId],
+    );
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    return Job.fromMap(maps[0]);
+  }
+
+  /// update an existing job in the database
+  Future<int> updateJob(Job job) async {
+    Database db = await database;
+    return await db.update(
+      tableJobs,
+      job.toMap(),
+      where: '$jobIdColumn = ?',
+      whereArgs: [job.jobId],
+    );
+  }
+
+  /// delete a job from the database by its job_id
+  Future<int> deleteJob(String jobId) async {
+    Database db = await database;
+    return await db.delete(
+      tableJobs,
+      where: '$jobIdColumn = ?',
+      whereArgs: [jobId],
+    );
+  }
+
+  /// get jobs filtered by status
+  Future<List<Job>> getJobsByStatus(String status) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableJobs,
+      where: '$statusColumn = ?',
+      whereArgs: [status],
+    );
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    return List.generate(maps.length, (i) {
+      return Job.fromMap(maps[i]);
+    });
+  }
+
+  // ========== INSPECTION ITEMS CRUD OPERATIONS ==========
+  // TODO: Implement inspection items methods
+
+  // ========== ATTACHMENTS CRUD OPERATIONS ==========
+  // TODO: Implement attachments methods
+
+  /// Close the database connection
+  Future<void> closeDatabase() async {
+    Database db = await database;
+    await db.close();
+  }
+}
