@@ -45,46 +45,61 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
 
   /// handle save button press - saves inspection data to local database
   void _handleSave() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        // create new inspection item - unique ID
-        final inspectionItem = InspectionItem(
-          inspectionId: const Uuid().v4(), // Generate unique ID
-          jobId: widget.job.jobId,
-          notes: _notesController.text.trim(),
-          result: _selectedResult,
-          updatedAt: DateTime.now(),
-          syncState: 'pending', // Mark as pending sync
+    // Validate the form
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Validate that result is selected (not just the default "Pass")
+    // In a real app, we might have a null-safe result selection
+    if (_selectedResult.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an inspection result'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // create new inspection item - unique ID
+      final inspectionItem = InspectionItem(
+        inspectionId: const Uuid().v4(), // Generate unique ID
+        jobId: widget.job.jobId,
+        notes: _notesController.text.trim(),
+        result: _selectedResult,
+        updatedAt: DateTime.now(),
+        syncState: 'pending', // Mark as pending sync
+      );
+
+      // save to local db
+      await DatabaseHelper.instance.insertInspectionItem(inspectionItem);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Inspection saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
 
-        // save to local db
-        await DatabaseHelper.instance.insertInspectionItem(inspectionItem);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Inspection saved successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          // back to job list
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          });
-        }
-      } catch (e) {
-        // show error message if save fails
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error saving inspection: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        // back to job list
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        });
+      }
+    } catch (e) {
+      // show error message if save fails
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving inspection: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -241,6 +256,10 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter inspection notes';
+                    }
+                    // Check minimum length (at least 10 characters)
+                    if (value.trim().length < 10) {
+                      return 'Notes must be at least 10 characters long';
                     }
                     return null;
                   },
