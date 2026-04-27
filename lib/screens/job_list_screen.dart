@@ -34,9 +34,12 @@ class _JobListScreenState extends State<JobListScreen> {
       _jobsFuture = _loadJobs();
     });
 
-    final message = (result.synced == 0 && result.failed == 0)
-        ? 'No pending inspections to sync'
-        : '${result.synced} inspection(s) synced, ${result.failed} failed';
+    // build a message from whichever counts are non-zero
+    final parts = <String>[];
+    if (result.synced > 0) parts.add('${result.synced} uploaded');
+    if (result.pulled > 0) parts.add('${result.pulled} pulled');
+    if (result.failed > 0) parts.add('${result.failed} failed');
+    final message = parts.isEmpty ? 'nothing to sync' : parts.join(', ');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),

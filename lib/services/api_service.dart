@@ -47,4 +47,30 @@ class ApiService {
       return false;
     }
   }
+
+  /// download all inspection records from the server
+  /// returns an empty list if the server is unreachable
+  Future<List<InspectionItem>> downloadInspections() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/inspections'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = data['inspections'] as List<dynamic>;
+        debugPrint('[ApiService] pulled ${list.length} inspection(s) from server');
+        return list
+            .map((m) => InspectionItem.fromMap(m as Map<String, dynamic>))
+            .toList();
+      }
+
+      debugPrint('[ApiService] pull failed: HTTP ${response.statusCode}');
+      return [];
+    } catch (e) {
+      // network error or timeout
+      debugPrint('[ApiService] pull error: $e');
+      return [];
+    }
+  }
 }

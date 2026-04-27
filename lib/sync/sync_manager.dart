@@ -6,37 +6,39 @@ import 'package:assetguard/services/api_service.dart';
 class SyncResult {
   final int synced;
   final int failed;
+  final int pulled;
 
-  const SyncResult({required this.synced, required this.failed});
+  const SyncResult({
+    required this.synced,
+    required this.failed,
+    this.pulled = 0,
+  });
 }
 
 /// handles the offline-first sync workflow:
-/// fetches pending/failed inspections, uploads each to the server,
-/// then updates the local sync_state based on whether it worked
+/// push pending/failed inspections up to the server first,
+/// then pull all server records down so every device stays in sync
 class SyncManager {
   SyncManager._privateConstructor();
 
   static final SyncManager instance = SyncManager._privateConstructor();
 
-  /// sync all pending and previously-failed inspections
-  /// returns a SyncResult with counts of how many succeeded and failed
+  /// push any pending/failed records, then pull everything from the server
+  /// returns a SyncResult with counts for uploaded, pulled, and failed
   Future<SyncResult> syncAll() async {
     int synced = 0;
     int failed = 0;
+    int pulled = 0;
 
     try {
+      // --- push phase ---
       // get everything that still needs to be sent to the server
-      final inspections =
+      final pending =
           await DatabaseHelper.instance.getPendingAndFailedInspections();
 
-      if (inspections.isEmpty) {
-        debugPrint('[SyncManager] nothing to sync');
-        return const SyncResult(synced: 0, failed: 0);
-      }
+      debugPrint('[SyncManager] pushing ${pending.length} inspection(s)...');
 
-      debugPrint('[SyncManager] syncing ${inspections.length} inspection(s)...');
-
-      for (final inspection in inspections) {
+      for (final inspection in pending) {
         final success = await ApiService.instance.uploadInspection(inspection);
 
         // update the local record to match what happened
@@ -46,16 +48,29 @@ class SyncManager {
 
         if (success) {
           synced++;
-          debugPrint('[SyncManager] synced ${inspection.inspectionId}');
+          debugPrint('[SyncManager] uploaded ${inspection.inspectionId}');
         } else {
           failed++;
-          debugPrint('[SyncManager] failed ${inspection.inspectionId}');
+          debugPrint('[SyncManager] upload failed ${inspection.inspectionId}');
         }
       }
+
+      // --- pull phase ---
+      // download all records from the server and upsert them locally
+      // server copy wins — this keeps all devices in sync
+      final downloaded = await ApiService.instance.downloadInspections();
+
+      for (final item in downloaded) {
+        // insertInspectionItem uses ConflictAlgorithm.replace so this is an upsert
+        await DatabaseHelper.instance.insertInspectionItem(item);
+        pulled++;
+      }
+
+      debugPrint('[SyncManager] pulled $pulled inspection(s) from server');
     } catch (e) {
       debugPrint('[SyncManager] unexpected error: $e');
     }
 
-    return SyncResult(synced: synced, failed: failed);
+    return SyncResult(synced: synced, failed: failed, pulled: pulled);
   }
 }
