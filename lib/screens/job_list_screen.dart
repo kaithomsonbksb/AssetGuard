@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:assetguard/database/database_helper.dart';
 import 'package:assetguard/models/job.dart';
+import 'package:assetguard/sync/sync_manager.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -11,11 +12,35 @@ class JobListScreen extends StatefulWidget {
 
 class _JobListScreenState extends State<JobListScreen> {
   late Future<List<Job>> _jobsFuture;
+  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     _jobsFuture = _loadJobs();
+  }
+
+  /// trigger a sync of all pending/failed inspections and show the result
+  Future<void> _syncInspections() async {
+    setState(() => _isSyncing = true);
+
+    final result = await SyncManager.instance.syncAll();
+
+    if (!mounted) return;
+
+    // refresh the job list so sync status chips update immediately
+    setState(() {
+      _isSyncing = false;
+      _jobsFuture = _loadJobs();
+    });
+
+    final message = (result.synced == 0 && result.failed == 0)
+        ? 'No pending inspections to sync'
+        : '${result.synced} inspection(s) synced, ${result.failed} failed';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   /// load jobs from database, show sample jobs on first load
@@ -73,6 +98,25 @@ class _JobListScreenState extends State<JobListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inspection Jobs'),
+        actions: [
+          // show a spinner while sync is in progress, otherwise the sync button
+          if (_isSyncing)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.sync),
+              tooltip: 'Sync pending inspections',
+              onPressed: _syncInspections,
+            ),
+        ],
       ),
       body: FutureBuilder<List<Job>>(
         future: _jobsFuture,
