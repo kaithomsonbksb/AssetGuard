@@ -297,6 +297,16 @@ Future<Database> _initDatabase() async {
       whereArgs: [inspectionId],
     );
   }
+  /// get every inspection item in the database, newest first
+  Future<List<InspectionItem>> getAllInspectionItems() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableInspectionItems,
+      orderBy: '$updatedAtColumn DESC',
+    );
+    return maps.map((m) => InspectionItem.fromMap(m)).toList();
+  }
+
   /// get all inspections with sync_state = 'pending' or 'failed'
   Future<List<InspectionItem>> getPendingAndFailedInspections() async {
     Database db = await database;

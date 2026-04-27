@@ -99,6 +99,12 @@ class _JobListScreenState extends State<JobListScreen> {
       appBar: AppBar(
         title: const Text('Inspection Jobs'),
         actions: [
+          // navigate to the sync status screen
+          IconButton(
+            icon: const Icon(Icons.list_alt),
+            tooltip: 'View sync status',
+            onPressed: () => Navigator.of(context).pushNamed('/sync-status'),
+          ),
           // show a spinner while sync is in progress, otherwise the sync button
           if (_isSyncing)
             const Padding(

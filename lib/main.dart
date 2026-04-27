@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/job_list_screen.dart';
 import 'screens/inspection_detail_screen.dart';
+import 'screens/sync_status_screen.dart';
 
 void main() {
   runApp(const AssetGuardApp());
@@ -28,6 +29,7 @@ class AssetGuardApp extends StatelessWidget {
           final job = ModalRoute.of(context)!.settings.arguments;
           return InspectionDetailScreen(job: job as dynamic);
         },
+        '/sync-status': (context) => const SyncStatusScreen(),
       },
     );
   }
