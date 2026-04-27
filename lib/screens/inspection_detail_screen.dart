@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:assetguard/models/job.dart';
 import 'package:assetguard/models/inspection_item.dart';
+import 'package:assetguard/models/attachment.dart';
 import 'package:assetguard/database/database_helper.dart';
 
 /// InspectionDetailScreen displays details for a selected job
@@ -28,6 +31,10 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
   // dropdown value for inspection result
   String _selectedResult = 'Pass';
 
+  // photos selected by the user before saving
+  final List<XFile> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
+
   // list possible inspection results
   final List<String> _resultOptions = ['Pass', 'Fail', 'Requires attention'];
 
@@ -41,6 +48,14 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
   void dispose() {
     _notesController.dispose();
     super.dispose();
+  }
+
+  /// open the image picker and add any chosen photos to the list
+  Future<void> _pickImages() async {
+    final images = await _picker.pickMultiImage();
+    if (images.isNotEmpty) {
+      setState(() => _selectedImages.addAll(images));
+    }
   }
 
   /// handle save button press - saves inspection data to local database
@@ -71,8 +86,20 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
         syncState: 'pending', // Mark as pending sync
       );
 
-      // save to local db
+      // save inspection to local db
       await DatabaseHelper.instance.insertInspectionItem(inspectionItem);
+
+      // save each selected photo as an attachment linked to this inspection
+      for (final image in _selectedImages) {
+        final attachment = Attachment(
+          attachmentId: const Uuid().v4(),
+          inspectionId: inspectionItem.inspectionId,
+          filePath: image.path,
+          fileType: 'image',
+          syncState: 'pending',
+        );
+        await DatabaseHelper.instance.insertAttachment(attachment);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -261,6 +288,66 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 24),
+
+                // photo attachments section
+                Text(
+                  'Attachments',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                // thumbnails of selected photos
+                if (_selectedImages.isNotEmpty)
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _selectedImages.length,
+                      itemBuilder: (context, index) {
+                        return Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(_selectedImages[index].path),
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            // tap X to remove a photo before saving
+                            Positioned(
+                              top: 0,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(
+                                    () => _selectedImages.removeAt(index)),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 18, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.add_a_photo),
+                  label: const Text('Add photos'),
+                  onPressed: _pickImages,
                 ),
                 const SizedBox(height: 32),
 

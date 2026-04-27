@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:assetguard/models/job.dart';
 import 'package:assetguard/models/inspection_item.dart';
+import 'package:assetguard/models/attachment.dart';
 
 /// DatabaseHelper singleton class that manages SQLite database operations
 class DatabaseHelper {
@@ -330,7 +331,39 @@ Future<Database> _initDatabase() async {
     );
   }
 
-  // TODO: Implement attachments methods
+  // ========== ATTACHMENTS CRUD OPERATIONS ==========
+
+  /// save a new attachment record linked to an inspection
+  Future<int> insertAttachment(Attachment attachment) async {
+    Database db = await database;
+    return await db.insert(
+      tableAttachments,
+      attachment.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// get all attachments for a specific inspection
+  Future<List<Attachment>> getAttachmentsByInspectionId(
+      String inspectionId) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableAttachments,
+      where: 'inspection_id = ?',
+      whereArgs: [inspectionId],
+    );
+    return maps.map((m) => Attachment.fromMap(m)).toList();
+  }
+
+  /// delete a single attachment by its id
+  Future<int> deleteAttachment(String attachmentId) async {
+    Database db = await database;
+    return await db.delete(
+      tableAttachments,
+      where: 'attachment_id = ?',
+      whereArgs: [attachmentId],
+    );
+  }
 
   /// Close the database connection
   Future<void> closeDatabase() async {
