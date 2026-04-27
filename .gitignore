@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Flask server database - generated at runtime, not part of the codebase
+inspections.db
