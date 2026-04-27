@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:assetguard/database/database_helper.dart';
 import 'package:assetguard/models/inspection_item.dart';
 
@@ -7,6 +9,11 @@ class SyncManager {
   SyncManager._privateConstructor();
 
   static final SyncManager instance = SyncManager._privateConstructor();
+
+  // API endpoint configuration - change to your server URL
+  static const String _apiBaseUrl = 'http://192.168.1.151:5000';
+  static const String _syncEndpoint = '$_apiBaseUrl/inspections/sync';
+  static const String _syncBatchEndpoint = '$_apiBaseUrl/inspections/sync-batch';
 
   /// get all pending inspection items that need to be synced
   Future<List<InspectionItem>> getPendingInspections() async {
@@ -105,20 +112,35 @@ class SyncManager {
   /// for now, returns true to simulate successful upload
   Future<bool> _uploadInspectionToServer(InspectionItem inspection) async {
     try {
-      // TODO: Replace with actual HTTP POST request
-      // Example:
-      // final response = await http.post(
-      //   Uri.parse('$_apiEndpoint/${inspection.inspectionId}'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode(inspection.toMap()),
-      // );
-      // return response.statusCode == 200;
+      debugPrint('Uploading inspection ${inspection.inspectionId} to server...');
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      final response = await http.post(
+        Uri.parse(_syncEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'inspection_id': inspection.inspectionId,
+          'job_id': inspection.jobId,
+          'notes': inspection.notes,
+          'result': inspection.result,
+          'updated_at': inspection.updatedAt.toIso8601String(),
+        }),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Request timeout after 30 seconds');
+        },
+      );
 
-      final isSuccess = DateTime.now().millisecond % 10 != 0;
+      debugPrint(
+          'Upload response: ${response.statusCode} - ${response.body}');
 
-      return isSuccess;
+      if (response.statusCode == 200) {
+        debugPrint('Successfully uploaded inspection ${inspection.inspectionId}');
+        return true;
+      } else {
+        debugPrint('Upload failed with status ${response.statusCode}');
+        return false;
+      }
     } catch (e) {
       debugPrint('Upload error: $e');
       return false;
@@ -158,6 +180,94 @@ class SyncManager {
       return allSynced;
     } catch (e) {
       debugPrint('Error retrying failed inspections: $e');
+      return false;
+    }
+  }
+
+  /// Batch sync multiple inspections at once (more efficient)
+  Future<bool> syncPendingInspectionsBatch() async {
+    try {
+      final pendingInspections = await getPendingInspections();
+
+      if (pendingInspections.isEmpty) {
+        debugPrint('No pending inspections to sync');
+        return true;
+      }
+
+      debugPrint(
+          'Batch syncing ${pendingInspections.length} pending inspections...');
+
+      final response = await http.post(
+        Uri.parse(_syncBatchEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'inspections': pendingInspections.map((inspection) {
+            return {
+              'inspection_id': inspection.inspectionId,
+              'job_id': inspection.jobId,
+              'notes': inspection.notes,
+              'result': inspection.result,
+              'updated_at': inspection.updatedAt.toIso8601String(),
+            };
+          }).toList(),
+        }),
+      ).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          throw Exception('Batch sync timeout after 60 seconds');
+        },
+      );
+
+      debugPrint('Batch sync response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final results = responseData['results'] ?? {};
+        final successful =
+            (results['successful'] as List?)?.length ?? 0;
+        final failed = (results['failed'] as List?)?.length ?? 0;
+
+        debugPrint(
+            'Batch sync completed: $successful successful, $failed failed');
+
+        // Update sync state for all synced inspections
+        for (final inspection in pendingInspections) {
+          try {
+            final updatedInspection =
+                inspection.copyWith(syncState: 'synced');
+            await DatabaseHelper.instance
+                .updateInspectionItem(updatedInspection);
+          } catch (e) {
+            debugPrint('Error updating inspection: $e');
+          }
+        }
+
+        return failed == 0;
+      } else {
+        debugPrint('Batch sync failed with status ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error during batch sync: $e');
+      return false;
+    }
+  }
+
+  /// Check server health
+  Future<bool> checkServerHealth() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiBaseUrl/health'),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Health check timeout');
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Health check failed: $e');
       return false;
     }
   }
