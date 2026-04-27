@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:assetguard/models/job.dart';
 import 'package:assetguard/models/inspection_item.dart';
@@ -47,29 +46,27 @@ Future<Database> get database async {
 }
 
 Future<Database> _initDatabase() async {
-  const databaseName = 'assetguard.db';
-
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
     final dbPath = await databaseFactory.getDatabasesPath();
-    final path = join(dbPath, databaseName);
+    final path = join(dbPath, _dbName);
 
     return await databaseFactory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: _dbVersion,
         onCreate: _onCreate,
       ),
     );
   } else {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, databaseName);
+    final path = join(dbPath, _dbName);
 
     return await openDatabase(
       path,
-      version: 1,
+      version: _dbVersion,
       onCreate: _onCreate,
     );
   }
@@ -227,6 +224,14 @@ Future<Database> _initDatabase() async {
         dueDate: DateTime.now().add(const Duration(days: 7)),
         status: 'Assigned',
       ),
+    ];
+
+    for (final job in sampleJobs) {
+      await insertJob(job);
+    }
+  }
+
+  // ========== INSPECTION ITEMS CRUD OPERATIONS ==========
 
   /// insert a new inspection item into the database
   Future<int> insertInspectionItem(InspectionItem item) async {
@@ -292,16 +297,6 @@ Future<Database> _initDatabase() async {
       whereArgs: [inspectionId],
     );
   }
-
-    for (final job in sampleJobs) {
-      await insertJob(job);
-    }
-  }
-
-  // ========== INSPECTION ITEMS CRUD OPERATIONS ==========
-  // TODO: Implement inspection items methods
-
-  // ========== ATTACHMENTS CRUD OPERATIONS ==========
   // TODO: Implement attachments methods
 
   /// Close the database connection

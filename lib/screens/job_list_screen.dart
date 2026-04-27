@@ -79,29 +79,10 @@ class _JobListScreenState extends State<JobListScreen> {
         builder: (context, snapshot) {
           // show loading spinner while fetching jobs
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CenteFutureBuilder<String>(
-                      future: _getInspectionSyncStatus(job.jobId),
-                      builder: (context, syncSnapshot) {
-                        final syncStatus = syncSnapshot.data ?? 'No inspections';
-                        final color = _getSyncStatusColor(syncStatus);
-
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // status
-                            Chip(
-                              label: Text(job.status),
-                              backgroundColor: Colors.blue.shade100,
-                            ),
-                            const SizedBox(width: 8),
-                            Chip(
-                              label: Text(syncStatus),
-                              backgroundColor: color.withOpacity(0.2),
-                              labelStyle: TextStyle(color: color),
-                            ),
-                          ],
-                        );
-                      }
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
           // show error message if something went wrong
           if (snapshot.hasError) {
@@ -137,8 +118,29 @@ class _JobListScreenState extends State<JobListScreen> {
                     subtitle: Text(
                       '${job.assignedEngineer} • Due: ${job.dueDate.toString().split(' ').first}',
                     ),
-                    trailing: Chip(
-                      label: Text(job.status),
+                    trailing: FutureBuilder<String>(
+                      future: _getInspectionSyncStatus(job.jobId),
+                      builder: (context, syncSnapshot) {
+                        final syncStatus = syncSnapshot.data ?? 'No inspections';
+                        final color = _getSyncStatusColor(syncStatus);
+
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // status
+                            Chip(
+                              label: Text(job.status),
+                              backgroundColor: Colors.blue.shade100,
+                            ),
+                            const SizedBox(width: 8),
+                            Chip(
+                              label: Text(syncStatus),
+                              backgroundColor: color.withValues(alpha: 0.2),
+                              labelStyle: TextStyle(color: color),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     onTap: () {
                       // navigate to inspection detail screen with selected job
