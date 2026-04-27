@@ -297,6 +297,29 @@ Future<Database> _initDatabase() async {
       whereArgs: [inspectionId],
     );
   }
+  /// get all inspections with sync_state = 'pending' or 'failed'
+  Future<List<InspectionItem>> getPendingAndFailedInspections() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableInspectionItems,
+      where: '$syncStateColumn = ? OR $syncStateColumn = ?',
+      whereArgs: ['pending', 'failed'],
+    );
+    return maps.map((m) => InspectionItem.fromMap(m)).toList();
+  }
+
+  /// update the sync_state for a single inspection record
+  Future<int> updateInspectionSyncState(
+      String inspectionId, String syncState) async {
+    Database db = await database;
+    return await db.update(
+      tableInspectionItems,
+      {syncStateColumn: syncState},
+      where: '$inspectionIdColumn = ?',
+      whereArgs: [inspectionId],
+    );
+  }
+
   // TODO: Implement attachments methods
 
   /// Close the database connection
