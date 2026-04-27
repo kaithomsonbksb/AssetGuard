@@ -30,7 +30,7 @@ A Flask-based REST API server for syncing inspection data from the AssetGuard mo
    python server.py
    ```
 
-   The server will start on `http://localhost:5000` (or `http://192.168.1.151:5000` on your network)
+   The server will start on `http://localhost:5000` (or `http://192.168.1.91:5000` on your network)
 
 ## API Endpoints
 
@@ -247,7 +247,7 @@ GET /
 ```
 Web-based monitoring dashboard showing real-time statistics and recent inspections.
 
-Visit `http://192.168.1.151:5000/` in your browser.
+Visit `http://192.168.1.91:5000/` in your browser.
 
 ## Mobile App Integration
 
@@ -257,7 +257,7 @@ Update the `SyncManager` class in `lib/sync/sync_manager.dart`:
 
 ```dart
 // Change this to your server URL
-static const String _apiBaseUrl = 'http://192.168.1.151:5000';
+static const String _apiBaseUrl = 'http://192.168.1.91:5000';
 ```
 
 ### Using the Sync Manager
@@ -372,7 +372,7 @@ For production, consider:
 - Verify the server URL in `sync_manager.dart`
 - Check firewall settings
 - Ensure mobile device and server are on the same network
-- Test with: `curl http://192.168.1.151:5000/health`
+- Test with: `curl http://192.168.1.91:5000/health`
 
 ### Database locked error
 - Close all other connections to the database

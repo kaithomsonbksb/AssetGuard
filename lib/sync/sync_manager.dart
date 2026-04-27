@@ -11,7 +11,7 @@ class SyncManager {
   static final SyncManager instance = SyncManager._privateConstructor();
 
   // API endpoint configuration - change to your server URL
-  static const String _apiBaseUrl = 'http://192.168.1.151:5000';
+  static const String _apiBaseUrl = 'http://192.168.1.91:5000';
   static const String _syncEndpoint = '$_apiBaseUrl/inspections/sync';
   static const String _syncBatchEndpoint = '$_apiBaseUrl/inspections/sync-batch';
 
